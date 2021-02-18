@@ -1436,13 +1436,331 @@ Sass/SCSS (with dart-sass)和Sass/SCSS (with node-sass)：node-sass是自动编�
     </template>
     ```
 
-36. 插件
+36. 插件---插件通常用来为Vue添加全局功能
 
-    
+    - 插件的功能一般有以下几种：
+      - 添加全局方法或者property。如：vue-custom-element
+      - 添加全局资源：指令/过滤器/过渡等。如：vue-touch
+      - 通过全局混入来添加一些组件选项。如：vue-router
+      - 添加Vue实例方法，通过把它们添加到Vue.$prototype上实现
+      - 一个库，提供自己的API，同时提供上面提到的一个或多个功能。如：vue-router
+
+    - 使用插件。在new Vue()之前通过全局方法Vue.use()使用插件。即使多次调用Vue.use()来注册相同插件，该插件也只会注册一次。
+
+    - 开发插件。Vue.js的插件应该暴露一个install方法，该方法的第一个参数是Vue构造器，第二个参数是一个可选的选项对象
+
+      ```js
+      MyPlugin.install = function (Vue, options) {
+        // 1. 添加全局方法或 property
+        Vue.myGlobalMethod = function () {
+          // 逻辑...
+        }
+      
+        // 2. 添加全局资源
+        Vue.directive('my-directive', {
+          bind (el, binding, vnode, oldVnode) {
+            // 逻辑...
+          }
+          ...
+        })
+      
+        // 3. 注入组件选项
+        Vue.mixin({
+          created: function () {
+            // 逻辑...
+          }
+          ...
+        })
+      
+        // 4. 添加实例方法
+        Vue.prototype.$myMethod = function (methodOptions) {
+          // 逻辑...
+        }
+      }
+      ```
 
 37. 过滤器
 
-38. Vuex
+    - 过滤器可以用在两个地方：双花括号插值和v-bind表达式
+
+    ```vue
+    <!-- 在双花括号中 -->
+    {{ message | capitalize }}
+    
+    <!-- 在 `v-bind` 中 -->
+    <div v-bind:id="rawId | formatId"></div>
+    ```
+
+    - 当全局过滤器和局部过滤器重名时，会采用局部过滤器
+
+    ```js
+    // 局部定义过滤器
+    filters: {
+      capitalize: function (value) {
+        if (!value) return ''
+        value = value.toString()
+        return value.charAt(0).toUpperCase() + value.slice(1)
+      }
+    }
+    // 全局定义过滤器
+    Vue.filter('capitalize', function (value) {
+      if (!value) return ''
+      value = value.toString()
+      return value.charAt(0).toUpperCase() + value.slice(1)
+    })
+    
+    new Vue({
+      // ...
+    })
+    ```
+
+    - 过滤器可以接收参数
+
+    ```js
+    {{ message | filterA('arg1', arg2) }}
+    
+    // 过滤器filterA接收三个参数：第一个参数是message的值，第二个参数是'arg1'，第三个参数是arg2的值
+    ```
+
+    - 过滤器可以串联
+
+      ```vue
+      {{ message | filterA | filterB }}
+      ```
+
+38. 关注点分离不等于文件类型分离
+
+39. 测试
+
+    - 单元测试。将独立单元的代码进行隔离测试，在构建新特性或重构已有代码的同时保持应用的功能和稳定。
+      - Jest。一个专注于简易性的JavaScript测试框架。一个独特的功能是可以为测试生成快照(snapshot)，以提供另一种验证应用单元的方法。[Vue CLI 官方插件 - Jest](https://cli.vuejs.org/core-plugins/unit-jest.html)
+      - Mocha。一个专注于灵活性的 JavaScript 测试框架。因为其灵活性，它允许你选择不同的库来满足诸如侦听 (如 Sinon) 和断言 (如  Chai) 等其它常见的功能。另一个 Mocha 独特的功能是它不止可以在 Node.js 里运行测试，还可以在浏览器里运行测试。[Vue CLI 官方插件 - Mocha](https://cli.vuejs.org/core-plugins/unit-mocha.html)
+    - 组件测试
+      - Vue Testing Library(@testing-library/vue)。一组专注于测试组件而不依赖实现细节的工具。它的指导原则是，与软件使用方式相似的测试越多，它们提供的可信度越高。
+      - Vue Test Utils。Vue Testing Library是 Vue Test Utils 的抽象。Vue Test Utils为用户提供了对 Vue 特定 API 的访问。
+    - 端到端（E2E，end-to-end）测试。单元测试和组件测试在部署到生产环境时提供应用整体覆盖的能力是有限的。端到端测试验证应用中的所有层，不仅包括前端代码还包括所有相关的后端服务和基础设施。
+      - Cypress.io。[Vue CLI 官方插件 - Cypress](https://cli.vuejs.org/core-plugins/e2e-cypress.html)
+      - Nightwatch.js。[Vue CLI 官方插件 - Nightwatch](https://cli.vuejs.org/core-plugins/e2e-nightwatch.html)
+      - Puppeteer
+      - TestCafe
+
+40. TypeScript支持
+
+    - [Vue CLI](https://cli.vuejs.org) 提供了内建的 TypeScript 工具支持。
+
+    - 基于类的Vue组件。[vue-class-component](https://github.com/vuejs/vue-class-component) vue-property-decorator
+
+    - 标注返回值。render的返回值类型是VNode
+
+      ```js
+      import Vue, { VNode } from 'vue'
+      
+      const Component = Vue.extend({
+        data () {
+          return {
+            msg: 'Hello'
+          }
+        },
+        methods: {
+          // 需要标注有 `this` 参与运算的返回值类型
+          greet (): string {
+            return this.msg + ' world'
+          }
+        },
+        computed: {
+          // 需要标注
+          greeting(): string {
+            return this.greet() + '!'
+          }
+        },
+        // `createElement` 是可推导的，但是 `render` 需要返回值类型
+        render (createElement): VNode {
+          return createElement('div', this.greeting)
+        }
+      })
+      ```
+
+    - 标注Prop
+
+      ```js
+      import Vue, { PropType } from 'vue'
+      
+      interface ComplexMessage { 
+        title: string,
+        okMessage: string,
+        cancelMessage: string
+      }
+      const Component = Vue.extend({
+        props: {
+          name: String,
+          success: { type: String },
+          callback: { 
+            type: Function as PropType<() => void>
+          },
+          message: {
+            type: Object as PropType<ComplexMessage>,
+            required: true,
+            validator (message: ComplexMessage) {
+              return !!message.title;
+            }
+          }
+        }
+      })
+      ```
+
+41. 生产环境部署
+
+    - 当使用webpack或Browserify类似的构建工具时，Vue源码会根据process.env.NODE_ENV决定是否启用生产环境模式，默认为开发环境模式。
+
+    - 在webpack4+中，使用mode: 'production'启用生产环境模式
+
+    - 在Rollup中，使用[@rollup/plugin-replace](https://github.com/rollup/plugins/tree/master/packages/replace)
+
+      ```js
+      const replace = require('@rollup/plugin-replace')
+      rollup({
+        // ...
+        plugins: [
+          replace({
+            'process.env.NODE_ENV': JSON.stringify( 'production' )
+          })
+        ]
+      }).then(...)
+      ```
+
+    - 当使用DOM内模板或JavaScript内的字符串模板时，模板会在运行时被编译为渲染函数
+
+    - 提取组件的CSS。当使用单文件组件时，组件内的CSS会以<style> 标签的方式，通过JavaScript动态注入。这有一些小小的运行时开销，如果你使用服务端渲染，这会导致一段“无样式内容闪烁 (fouc)”。将所有组件的 CSS 提取到同一个文件可以避免这个问题，也会让 CSS 更好地进行压缩和缓存。[webpack + vue-loader](https://vue-loader.vuejs.org/zh-cn/configurations/extract-css.html) (`vue-cli` 的 webpack 模板已经预先配置好)；[Rollup + rollup-plugin-vue](https://vuejs.github.io/rollup-plugin-vue/#/en/2.3/?id=custom-handler)
+
+    - 跟踪运行时错误。如果在组件渲染时出现运行错误，错误将会被传递至全局Vue.config.errorHandler配置函数中(如果已设置)。利用这个钩子函数来配合错误跟踪服务是个不错的主意。比如 [Sentry](https://sentry.io)，它为 Vue 提供了[官方集成](https://sentry.io/for/vue/)。
+
+42. 服务端渲染
+
+    - 构建Vue服务端渲染应用，参考[ssr.vuejs.org](https://ssr.vuejs.org/zh/)
+    - Nuxt.js。[Nuxt.js](https://nuxtjs.org/)是一个基于Vue生态的更高层的框架，为开发服务端渲染的 Vue 应用提供了极其便利的开发体验。甚至可以用它来做为静态站生成器。
+    - Quasar Framework SSR + PWA。[Quasar Framework](https://quasar.dev) 可以通过其一流的构建系统、合理的配置和开发者扩展性生成 (可选地和 PWA 互通的) SSR  应用，让你的想法的设计和构建变得轻而易举。你可以在服务端挑选执行超过上百款遵循“Material Design  2.0”的组件，并在浏览器端可用。你甚至可以管理网站的 `<meta>` 标签。Quasar 是一个基于 Node.js 和 webpack 的开发环境，它可以通过一套代码完成 SPA、PWA、SSR、Electron、Capacitor 和 Cordova 应用的快速开发。
+
+43. 安全
+
+    - 不论使用模板还是渲染函数，内容都会被自动转义，避免脚本注入。该转义通过诸如textContent的浏览器原生API完成
+    - 动态attribute绑定也会自动被转义，避免通过闭合`title` attribute 而注入新的任意 HTML。该转义通过诸如 `setAttribute` 的浏览器原生的 API 完成。
+
+44. 深入响应式原理
+
+    ![vue响应式](https://cn.vuejs.org/images/data.png)
+
+    - 当把一个普通的JavaScript对象传入Vue实例作为data选项，Vue将遍历此对象所有的property，并使用Object.defineProperty把这些property全部转为getter/setter。Object.defineProperty是ES5中一个无法shim（将一个新的API引入到一个旧的环境中，而且仅靠旧环境中已有的手段实现）的特性，这也就是Vue不支持IE8及以下版本浏览器的原因。
+
+    - 这些getter/setter在内部让Vue能够追踪依赖，在property被访问和修改时通知变更。
+
+    - 每个组件实例都对应一个watcher实例，它会在组件渲染的过程中把“接触”过的数据property记录为依赖。之后当依赖项的setter触发时，会通知watcher，从而使它关联的组件重新渲染。
+
+    - Vue不能检测数组和对象的变化。
+
+      - 对于对象。Vue无法检测property的添加或移除。由于 Vue 会在初始化实例时对 property 执行 getter/setter 转化，所以 property 必须在 `data` 对象上存在才能让 Vue 将它转换为响应式的。对于已经创建的实例，Vue 不允许动态添加根级别的响应式 property。但是，可以使用 `Vue.set(object, propertyName, value)` 方法向嵌套对象添加响应式 property。`vm.$set` 实例方法是全局 `Vue.set` 方法的别名。为已有对象赋值多个新 property时，可以使用this.someObject = Object.assign({}, this.someObject, { a: 1, b: 2 })
+
+      - 对于数组。以下情况，vue不能检测数组的变动：1.修改数组的长度；2.利用索引改变数组的某一项
+
+        ```js
+        var vm = new Vue({
+          data: {
+            items: ['a', 'b', 'c']
+          }
+        })
+        vm.items[1] = 'x' // 不是响应性的
+        vm.items.length = 2 // 不是响应性的
+        
+        // 以下可以在响应式系统内触发更新
+        
+        //改变数组某一项
+        // Vue.set
+        Vue.set(vm.items, indexOfItem, newValue)
+        vm.$set(vm.items, indexOfItem, newValue)
+        // Array.prototype.splice
+        vm.items.splice(indexOfItem, 1, newValue)
+        
+        // 改变数组长度
+        vm.items.splice(newLength)
+        ```
+
+    - 异步更新队列
+
+      - Vue在更新DOM时是异步执行的。
+
+      - 只要侦听到数据变化，Vue将开启一个队列，并缓冲在同一事件循环中发生的所有数据变更。
+
+      - 如果同一个watcher被多次触发，只会被推入到队列中一次。
+
+      - 这种在缓冲时去除重复数据对于避免不必要的计算和DOM操作是非常重要的。
+
+      - 在下一个的事件循环“tick”中，Vue刷新队列并执行实际(已去重的)工作。
+
+      - Vue在内部对异步队列使用原生的`Promise.then`、`MutationObserver` 和 `setImmediate`，如果执行环境不支持，则会采用 `setTimeout(fn, 0)` 代替。
+
+      - 例如，当你设置 `vm.someData = 'new value'`，该组件不会立即重新渲染。当刷新队列时，组件会在下一个事件循环“tick”中更新。
+
+      - 为了在数据变化之后等待 Vue 完成更新 DOM，可以在数据变化之后立即使用 `Vue.nextTick(callback)`。这样回调函数将在 DOM 更新完成后被调用。
+
+        ```js
+        Vue.component('example', {
+          template: '<span>{{ message }}</span>',
+          data: function () {
+            return {
+              message: '未更新'
+            }
+          },
+          methods: {
+            updateMessage: function () {
+              this.message = '已更新'
+              console.log(this.$el.textContent) // => '未更新'
+              this.$nextTick(function () {
+                console.log(this.$el.textContent) // => '已更新'
+              })
+            }
+            // 或者使用async/await，因为$nextTick() 返回一个 Promise 对象
+            updateMessage: async function () {
+              this.message = '已更新'
+              console.log(this.$el.textContent) // => '未更新'
+              await this.$nextTick()
+              console.log(this.$el.textContent) // => '已更新'
+            }
+          }
+        })
+        ```
+
+45. 对比React
+
+    - React 和 Vue 有许多相似之处，它们都有：
+      - 使用 Virtual DOM
+      - 提供了响应式 (Reactive) 和组件化 (Composable) 的视图组件。
+      - 将注意力集中保持在核心库，而将其他功能如路由和全局状态管理交给相关的库。
+
+    - 优化
+      - 在React应用中，当某个组件的状态发生变化时，会以该组件为根，重新渲染整个组件子树。如要避免不必要的子组件的充渲染，需要在所有可能的地方使用PureComponent，或使用shouldComponentUpdate方法。同时你可能会需要使用不可变的数据结构来使得你的组件更容易被优化。使用 `PureComponent` 和 `shouldComponentUpdate` 时，需要保证该组件的整个子树的渲染输出都是由该组件的 props 所决定的。如果不符合这个情况，那么此类优化就会导致难以察觉的渲染结果不一致。
+      - 在Vue应用中，组件的依赖是在渲染过程中自动追踪的，所以系统能精确知道哪个组件确实需要被重渲染。
+
+    - JSX vs Templates
+      - 使用JSX的渲染函数的优势：可以使用完整的编程语言 JavaScript 功能来构建你的视图页面。比如可以使用临时变量、JS 自带的流程控制、以及直接引用当前 JS 作用域中的值等等；开发工具对 JSX 的支持相比于现有可用的其他 Vue 模板还是比较先进的 (比如，linting、类型检查、编辑器的自动完成)。
+
+    - 组件作用域内的css
+
+      CSS作用域在React中是通过CSS-in-JS 的方案实现的 (比如 [styled-components](https://github.com/styled-components/styled-components) 和 [emotion](https://github.com/emotion-js/emotion))。
+
+      许多主流的 CSS-in-JS 库也都支持 Vue (比如 [styled-components-vue](https://github.com/styled-components/vue-styled-components) 和 [vue-emotion](https://github.com/egoist/vue-emotion))。这里 React 和 Vue 主要的区别是，Vue 设置样式的默认方法是[单文件组件](https://cn.vuejs.org/v2/guide/single-file-components.html)里类似 `style` 的标签，scoped会自动添加一个唯一的 attribute (比如 `data-v-21e5b78`) 为组件内 CSS 指定作用域，编译的时候 `.list-container:hover` 会被编译成类似 .list-container[data-v-21e5b78]:hover
+
+      Vue 的单文件组件里的样式设置是非常灵活的。通过 [vue-loader](https://github.com/vuejs/vue-loader)，你可以使用任意预处理器、后处理器，甚至深度集成 [CSS Modules](https://vue-loader.vuejs.org/en/features/css-modules.html)——全部都在 `<style>` 标签内。
+
+    - 原生渲染
+
+      React Native 能使你用相同的组件模型编写有本地渲染能力的 APP (iOS 和 Android)，能同时跨多平台开发。
+
+      Weex （Weex 是阿里巴巴发起的跨平台用户界面开发框架）允许你使用 Vue 语法开发不仅仅可以运行在浏览器端，还能被用于开发 iOS 和 Android 上的原生应用的组件。另一个选择是 [NativeScript-Vue](https://nativescript-vue.org/)，一个用 Vue.js 构建完全原生应用的 [NativeScript](https://www.nativescript.org/) 插件。
+
+    - [MobX](https://cn.mobx.js.org/)
+
+46. Vuex
+
+    Redux 事实上无法感知视图层，所以它能够轻松的通过一些[简单绑定](https://classic.yarnpkg.com/en/packages?q=redux vue&p=1)和 Vue 一起使用。Vuex 区别在于它是一个专门为 Vue 应用所设计。这使得它能够更好地和 Vue 进行整合，同时提供简洁的 API 和改善过的开发体验。
 
     Vuex采用集中式存储管理应用的所有组件的状态，以相应的规则保证状态以一种可预测的方式发生变化。
 
@@ -1450,4 +1768,8 @@ Sass/SCSS (with dart-sass)和Sass/SCSS (with node-sass)：node-sass是自动编�
 
     mapState函数返回的是一个对象
 
-39. 
+47. Vue CLI
+
+48. Vue Loader
+
+49. Vue Router
